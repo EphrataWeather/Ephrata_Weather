@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HRRR Liquid Glass (Mapbox Pro)</title>
+    <title>HRRR Liquid Glass (Smooth Animation)</title>
     <link href='https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css' rel='stylesheet' />
     <script src='https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js'></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -32,7 +32,7 @@
         <div class="text-right">
             <div class="text-[10px] flex items-center gap-1 text-cyan-400 font-bold">
                 <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
-                LIVE SUB-HOURLY
+                HRRR SUB-HOURLY
             </div>
             <div id="validTime" class="text-xs font-mono opacity-80">--:--Z</div>
         </div>
@@ -91,16 +91,17 @@
     const validTimeLabel = document.getElementById('validTime');
     
     let isPlaying = false, playInterval, currentRun = "";
+    let activeLayerIndex = 0; // 0 or 1 to track which layer is currently visible
+    const layerNames = ['hrrr-layer-0', 'hrrr-layer-1'];
 
     const map = new mapboxgl.Map({
         container: 'map',
         style: 'mapbox://styles/mapbox/dark-v11',
         center: [-98.5, 38.5],
         zoom: 4,
-        fadeDuration: 0
+        fadeDuration: 0 // Disable base map fade
     });
 
-    // Initialize model runs immediately
     (function initRuns() {
         const now = new Date();
         const latency = 2.5 * 3600000; 
@@ -122,7 +123,7 @@
         const steps = parseInt(timeline.value);
         const totalMinutes = steps * 15;
         
-        // Update UI Text
+        // Immediate UI Update
         frameOffsetLabel.innerText = `+${Math.floor(totalMinutes/60)}h ${String(totalMinutes%60).padStart(2, '0')}m`;
         const runDate = new Date(Date.UTC(parseInt(currentRun.substring(0,4)), parseInt(currentRun.substring(4,6))-1, parseInt(currentRun.substring(6,8)), parseInt(currentRun.substring(8,10))));
         runDate.setMinutes(runDate.getMinutes() + totalMinutes);
@@ -130,12 +131,13 @@
 
         const tileUrl = `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/hrrr::REFP-F${String(totalMinutes).padStart(4, '0')}-${currentRun}/{z}/{x}/{y}.png`;
 
-        const source = map.getSource('hrrr-source');
-        if (source) {
-            // High-speed update: swap tiles without deleting layer
-            source.setTiles([tileUrl]);
-        } else {
-            // Find the correct depth: insert below labels and borders
+        // Cross-fade logic
+        const nextLayerIndex = 1 - activeLayerIndex;
+        const currentId = layerNames[activeLayerIndex];
+        const nextId = layerNames[nextLayerIndex];
+
+        // If layers don't exist yet, create them both
+        if (!map.getLayer(currentId)) {
             const layers = map.getStyle().layers;
             let firstTopLayerId;
             for (const layer of layers) {
@@ -145,19 +147,34 @@
                 }
             }
 
-            map.addSource('hrrr-source', { type: 'raster', tiles: [tileUrl], tileSize: 256 });
-            map.addLayer({
-                id: 'hrrr-layer',
-                type: 'raster',
-                source: 'hrrr-source',
-                paint: { 'raster-opacity': 0.8, 'raster-fade-duration': 0 }
-            }, firstTopLayerId);
+            layerNames.forEach((id, i) => {
+                map.addSource(id, { type: 'raster', tiles: [tileUrl], tileSize: 256 });
+                map.addLayer({
+                    id: id,
+                    type: 'raster',
+                    source: id,
+                    paint: { 
+                        'raster-opacity': i === 0 ? 0.8 : 0, 
+                        'raster-fade-duration': 200 // Slight fade for the transition
+                    }
+                }, firstTopLayerId);
+            });
+            return;
         }
+
+        // Update the "next" layer source
+        const nextSource = map.getSource(nextId);
+        nextSource.setTiles([tileUrl]);
+
+        // When the new tiles are ready, swap the opacities
+        map.once('idle', () => {
+            map.setPaintProperty(nextId, 'raster-opacity', 0.8);
+            map.setPaintProperty(currentId, 'raster-opacity', 0);
+            activeLayerIndex = nextLayerIndex;
+        });
     }
 
     map.on('load', updateMap);
-    
-    // Smooth timeline interaction
     timeline.addEventListener('input', updateMap);
     
     runSelect.addEventListener('change', (e) => {
@@ -177,7 +194,7 @@
         isPlaying = !isPlaying;
         document.getElementById('playIcon').classList.toggle('hidden', isPlaying);
         document.getElementById('pauseIcon').classList.toggle('hidden', !isPlaying);
-        if (isPlaying) playInterval = setInterval(() => step(1), 500);
+        if (isPlaying) playInterval = setInterval(() => step(1), 800); // Slower interval for loading
         else clearInterval(playInterval);
     });
 
