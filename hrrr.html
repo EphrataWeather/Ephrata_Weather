@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HRRR Liquid Glass Viewer (Mapbox)</title>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css' rel='stylesheet' />
+    <script src='https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js'></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --navy-glass: rgba(10, 25, 47, 0.85);
+            --accent-blue: #64ffda;
+        }
+        body { margin: 0; padding: 0; background: #020617; font-family: 'Inter', system-ui, sans-serif; overflow: hidden; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+
+        .liquid-glass {
+            background: var(--navy-glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        /* Custom slider styling remains same */
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 18px; width: 18px;
+            border-radius: 50%;
+            background: var(--accent-blue);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(100, 255, 218, 0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <div class="fixed top-6 left-6 z-10">
+        <div class="liquid-glass p-5 rounded-2xl shadow-2xl">
+            <h1 class="text-white text-xl font-bold tracking-tight mb-1">HRRR <span class="text-[#64ffda]">Liquid Glass</span></h1>
+            <p class="text-slate-400 text-xs uppercase tracking-widest font-semibold">Precipitation Potential</p>
+        </div>
+    </div>
+
+    <div class="fixed bottom-10 left-1/2 -translate-x-1/2 z-10 w-[90%] max-w-2xl">
+        <div class="liquid-glass p-6 rounded-3xl shadow-2xl border-t border-white/10">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-4">
+                    <button id="playBtn" class="w-12 h-12 flex items-center justify-center bg-[#64ffda] rounded-full hover:scale-105 transition-transform">
+                        <svg id="playIcon" class="w-5 h-5 text-navy-900" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        <svg id="pauseIcon" class="w-5 h-5 text-navy-900 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    </button>
+                    <div class="flex flex-col">
+                        <span id="validTime" class="text-white text-2xl font-mono font-bold leading-none">00:00Z</span>
+                        <span class="text-slate-400 text-[10px] uppercase tracking-tighter mt-1">Forecast Validity</span>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button id="prevBtn" class="p-3 text-slate-400 hover:text-[#64ffda] transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></button>
+                    <button id="nextBtn" class="p-3 text-slate-400 hover:text-[#64ffda] transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></button>
+                </div>
+            </div>
+            <input type="range" id="timeline" min="0" max="72" value="0" class="w-full h-1.5 bg-slate-700/50 rounded-lg appearance-none cursor-pointer">
+            <div class="flex justify-between mt-3 px-1">
+                <span class="text-[10px] text-slate-500 font-bold tracking-tighter uppercase">Initial Run</span>
+                <span class="text-[10px] text-slate-500 font-bold tracking-tighter uppercase">+72 Hours</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // REPLACE WITH YOUR TOKEN
+        mapboxgl.accessToken = 'pk.eyJ1IjoiZ3RnMDExNiIsImEiOiJjbWxsODV6NXAwNThmM2ZwdWlkYm0xNjFlIn0.vI186twXYzY45nnuV5FucQ';
+
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/dark-v11', // High contrast dark theme
+            center: [-96, 37.8],
+            zoom: 4
+        });
+
+        const timeline = document.getElementById('timeline');
+        const validTimeLabel = document.getElementById('validTime');
+        const playBtn = document.getElementById('playBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const prevBtn = document.getElementById('prevBtn');
+
+        let isPlaying = false;
+        let playInterval;
+
+        function getTileUrl(minutes) {
+            // Updated URL construction based on previous logic
+            const now = new Date();
+            const year = now.getUTCFullYear();
+            const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(now.getUTCDate()).padStart(2, '0');
+            // Assuming 00Z run for example consistency
+            return `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/hrrr::refd-${year}${month}${day}0000-${minutes}/{z}/{x}/{y}.png`;
+        }
+
+        function updateMap() {
+            const minutes = parseInt(timeline.value) * 60;
+            const runDate = new Date();
+            runDate.setUTCHours(0, 0, 0, 0);
+            runDate.setMinutes(runDate.getMinutes() + minutes);
+            validTimeLabel.innerText = runDate.toISOString().substring(11,16) + 'Z';
+
+            const newUrl = getTileUrl(minutes);
+
+            // In Mapbox GL JS, we update the source's tiles array to trigger a refresh
+            if (map.getSource('hrrr-source')) {
+                map.removeLayer('hrrr-layer');
+                map.removeSource('hrrr-source');
+            }
+
+            map.addSource('hrrr-source', {
+                type: 'raster',
+                tiles: [newUrl],
+                tileSize: 256
+            });
+
+            map.addLayer({
+                id: 'hrrr-layer',
+                type: 'raster',
+                source: 'hrrr-source',
+                paint: { 'raster-opacity': 0.85 }
+            });
+        }
+
+        map.on('load', () => {
+            updateMap();
+        });
+
+        // Controls Logic
+        function step(dir) {
+            let val = parseInt(timeline.value) + dir;
+            if (val > 72) val = 0;
+            if (val < 0) val = 72;
+            timeline.value = val;
+            updateMap();
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            document.getElementById('playIcon').classList.toggle('hidden', isPlaying);
+            document.getElementById('pauseIcon').classList.toggle('hidden', !isPlaying);
+            if (isPlaying) {
+                playInterval = setInterval(() => step(1), 600);
+            } else {
+                clearInterval(playInterval);
+            }
+        }
+
+        timeline.addEventListener('input', updateMap);
+        playBtn.addEventListener('click', togglePlay);
+        nextBtn.addEventListener('click', () => { if(isPlaying) togglePlay(); step(1); });
+        prevBtn.addEventListener('click', () => { if(isPlaying) togglePlay(); step(-1); });
+    </script>
+</body>
+</html>
