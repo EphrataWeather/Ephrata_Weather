@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HRRR Liquid Glass Viewer (Mapbox)</title>
+    <title>HRRR Liquid Glass Viewer (Mapbox Fixed)</title>
     <link href='https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css' rel='stylesheet' />
     <script src='https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js'></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -55,7 +55,7 @@
                 </select>
         </div>
         <div class="text-right">
-            <div id="statusIndicator" class="text-[10px] flex items-center gap-1 text-cyan-400">
+            <div class="text-[10px] flex items-center gap-1 text-cyan-400">
                 <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
                 HRRR SUB-HOURLY
             </div>
@@ -96,8 +96,8 @@
                 </div>
             </div>
 
-            <div class="flex flex-col items-end gap-1 flex-shrink">
-                <div class="text-[8px] sm:text-[9px] text-white/40 uppercase whitespace-nowrap">Precip Type</div>
+            <div class="flex flex-col items-end gap-1">
+                <div class="text-[8px] sm:text-[9px] text-white/40 uppercase">Precip Type</div>
                 <div class="w-32 sm:w-48 h-1.5 sm:h-2 rounded-full legend-preciptype border border-white/10"></div>
                 <div class="flex justify-between w-32 sm:w-48 text-[7px] sm:text-[8px] text-white/60 font-bold px-0.5">
                     <span style="color: #00C853">RAIN</span>
@@ -111,7 +111,6 @@
 </div>
 
 <script>
-    // Configuration - Replace with your token!
     mapboxgl.accessToken = 'pk.eyJ1IjoiZ3RnMDExNiIsImEiOiJjbWxsODV6NXAwNThmM2ZwdWlkYm0xNjFlIn0.vI186twXYzY45nnuV5FucQ';
 
     const runSelect = document.getElementById('runSelect');
@@ -126,7 +125,6 @@
     let playInterval;
     let currentRun = "";
 
-    // Initialize Mapbox
     const map = new mapboxgl.Map({
         container: 'map',
         style: 'mapbox://styles/mapbox/dark-v11',
@@ -136,10 +134,9 @@
 
     function initRuns() {
         const now = new Date();
-        const latencyOffset = 2 * 3600000;
+        const latencyOffset = 2.5 * 3600000; // 2.5 hour offset for safety
         const availableStartTime = now.getTime() - latencyOffset;
         
-        const runs = [];
         for (let i = 0; i < 12; i++) {
             const d = new Date(availableStartTime - i * 3600000);
             const yr = d.getUTCFullYear();
@@ -154,21 +151,17 @@
             opt.value = val;
             opt.textContent = label;
             runSelect.appendChild(opt);
-            runs.push(val);
+            if (i === 0) currentRun = val;
         }
-        currentRun = runs[0];
     }
 
     function getTileUrl(minutes) {
         const padMin = String(minutes).padStart(4, '0');
-        // Standard IEM HRRR sub-hourly precip type URL
         return `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/hrrr::REFP-F${padMin}-${currentRun}/{z}/{x}/{y}.png`;
     }
 
     function updateMap() {
-        // Steps 0-72 at 15 minute intervals = 1080 mins (18 hours)
         const minutes = parseInt(timeline.value) * 15;
-        
         frameOffsetLabel.innerText = `+${Math.floor(minutes/60)}h ${String(minutes%60).padStart(2, '0')}m`;
         
         const runDate = new Date(Date.UTC(
@@ -182,27 +175,25 @@
 
         const newUrl = getTileUrl(minutes);
 
-        if (map.getLayer('hrrr-layer')) {
-            const source = map.getSource('hrrr-source');
-            // Update source tiles in Mapbox GL JS
-            source.tiles = [newUrl];
-            // Clear cache and redraw
-            map.style.sourceCaches['hrrr-source'].clearTiles();
-            map.style.sourceCaches['hrrr-source'].update(map.transform);
-            map.triggerRepaint();
-        } else if (map.isStyleLoaded()) {
-            map.addSource('hrrr-source', {
-                type: 'raster',
-                tiles: [newUrl],
-                tileSize: 256
-            });
-            map.addLayer({
-                id: 'hrrr-layer',
-                type: 'raster',
-                source: 'hrrr-source',
-                paint: { 'raster-opacity': 0.85 }
-            });
-        }
+        // Standard remove/add method ensures Mapbox fetches the new tiles
+        if (map.getLayer('hrrr-layer')) map.removeLayer('hrrr-layer');
+        if (map.getSource('hrrr-source')) map.removeSource('hrrr-source');
+
+        map.addSource('hrrr-source', {
+            type: 'raster',
+            tiles: [newUrl],
+            tileSize: 256
+        });
+
+        map.addLayer({
+            id: 'hrrr-layer',
+            type: 'raster',
+            source: 'hrrr-source',
+            paint: { 
+                'raster-opacity': 0.85,
+                'raster-fade-duration': 0 // Crucial for responsive animation
+            }
+        }, 'road-label'); // Places the layer below labels but above terrain
     }
 
     function step(dir) {
@@ -224,13 +215,11 @@
         }
     }
 
-    // Mapbox needs style to load before adding layers
     map.on('load', () => {
         initRuns();
         updateMap();
     });
 
-    // Event Listeners
     timeline.addEventListener('input', updateMap);
     playBtn.addEventListener('click', togglePlay);
     nextBtn.addEventListener('click', () => { if(isPlaying) togglePlay(); step(1); });
