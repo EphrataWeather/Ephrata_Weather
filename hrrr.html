@@ -134,7 +134,7 @@
 
     function initRuns() {
         const now = new Date();
-        const latencyOffset = 2.5 * 3600000; // 2.5 hour offset for safety
+        const latencyOffset = 2.5 * 3600000; 
         const availableStartTime = now.getTime() - latencyOffset;
         
         for (let i = 0; i < 12; i++) {
@@ -161,6 +161,8 @@
     }
 
     function updateMap() {
+        if (!map.isStyleLoaded()) return;
+
         const minutes = parseInt(timeline.value) * 15;
         frameOffsetLabel.innerText = `+${Math.floor(minutes/60)}h ${String(minutes%60).padStart(2, '0')}m`;
         
@@ -175,7 +177,6 @@
 
         const newUrl = getTileUrl(minutes);
 
-        // Standard remove/add method ensures Mapbox fetches the new tiles
         if (map.getLayer('hrrr-layer')) map.removeLayer('hrrr-layer');
         if (map.getSource('hrrr-source')) map.removeSource('hrrr-source');
 
@@ -185,15 +186,25 @@
             tileSize: 256
         });
 
+        // Find first symbol (label) layer safely to put weather beneath text
+        const layers = map.getStyle().layers;
+        let firstSymbolId;
+        for (const layer of layers) {
+            if (layer.type === 'symbol') {
+                firstSymbolId = layer.id;
+                break;
+            }
+        }
+
         map.addLayer({
             id: 'hrrr-layer',
             type: 'raster',
             source: 'hrrr-source',
             paint: { 
                 'raster-opacity': 0.85,
-                'raster-fade-duration': 0 // Crucial for responsive animation
+                'raster-fade-duration': 0 
             }
-        }, 'road-label'); // Places the layer below labels but above terrain
+        }, firstSymbolId); 
     }
 
     function step(dir) {
