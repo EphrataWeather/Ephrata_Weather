@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liquid Glass Weather</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="glass-container">
+        <nav class="sidebar">
+            <div class="logo">WeatherOS</div>
+            <ul class="nav-links">
+                <li><a href="#" class="active" onclick="showTab('home')">Home</a></li>
+                <li><a href="#" onclick="showTab('forecast')">7-Day Forecast</a></li>
+                <li class="dropdown">
+                    <a href="javascript:void(0)" class="dropbtn">Experimental ▾</a>
+                    <div class="dropdown-content">
+                        <a href="#" onclick="loadFeature('feature1')">Feature Alpha</a>
+                        <a href="#" onclick="loadFeature('feature2')">Beta Radar</a>
+                        <a href="#" onclick="loadFeature('feature3')">AI Prediction</a>
+                    </div>
+                </li>
+                <li><a href="#" onclick="showTab('settings')">Settings</a></li>
+            </ul>
+        </nav>
+
+        <main class="main-content" id="home-tab">
+            <header>
+                <h2 id="location-name">Loading...</h2>
+                <div class="current-weather">
+                    <div class="temp-main">
+                        <span id="temp">--</span>°
+                        <img id="weather-icon" src="" alt="">
+                    </div>
+                    <p id="description">Checking conditions...</p>
+                </div>
+            </header>
+
+            <section class="details-grid">
+                <div class="detail-card"><span>Wind</span><p id="wind">-- mph</p></div>
+                <div class="detail-card"><span>Humidity</span><p id="humidity">--%</p></div>
+                <div class="detail-card"><span>Pressure</span><p id="pressure">-- in</p></div>
+                <div class="detail-card"><span>Dew Point</span><p id="dewpoint">--°</p></div>
+            </section>
+
+            <section class="radar-container">
+                <h3>Live Radar</h3>
+                <iframe src="https://ephrataweather.github.io/MRMS/public/" frameborder="0"></iframe>
+            </section>
+
+            <section class="hourly-forecast" id="hourly-list">
+                </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
