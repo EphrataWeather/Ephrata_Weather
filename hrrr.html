@@ -3,43 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HRRR Liquid Glass Viewer (Mapbox Fixed)</title>
+    <title>HRRR Liquid Glass (Mapbox Pro)</title>
     <link href='https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css' rel='stylesheet' />
     <script src='https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js'></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root {
-            --navy-glass: rgba(10, 25, 47, 0.85);
-            --accent-blue: #64ffda;
-        }
-        body { margin: 0; padding: 0; background: #020617; font-family: 'Inter', system-ui, sans-serif; overflow: hidden; }
+        :root { --navy-glass: rgba(10, 25, 47, 0.85); --accent-blue: #64ffda; }
+        body { margin: 0; padding: 0; background: #020617; font-family: 'Inter', sans-serif; overflow: hidden; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; }
-
-        .liquid-glass {
-            background: var(--navy-glass);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
-        }
-
-        /* Custom Range Slider */
+        .liquid-glass { background: var(--navy-glass); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6); }
         input[type=range] { -webkit-appearance: none; background: transparent; width: 100%; }
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; background: rgba(100, 255, 218, 0.1); border-radius: 3px; }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%;
-            background: var(--accent-blue); cursor: pointer; margin-top: -6px;
-            box-shadow: 0 0 10px var(--accent-blue);
-        }
-
-        .legend-preciptype {
-            background: linear-gradient(to right, 
-                #00C853 0%, #00C853 22%,   /* Rain */
-                #C3A1FF 25%, #C3A1FF 47%,  /* Mix */
-                #FF4500 50%, #FF4500 72%,  /* Freezing Rain */
-                #1E90FF 75%, #1E90FF 100%  /* Snow */
-            );
-        }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: var(--accent-blue); cursor: pointer; margin-top: -6px; box-shadow: 0 0 15px var(--accent-blue); }
+        .legend-gradient { background: linear-gradient(to right, #00C853 0%, #00C853 22%, #C3A1FF 25%, #C3A1FF 47%, #FF4500 50%, #FF4500 72%, #1E90FF 75%, #1E90FF 100% ); }
         select option { background: #0a192f; color: white; }
     </style>
 </head>
@@ -51,13 +27,12 @@
     <div class="liquid-glass rounded-2xl p-3 flex items-center justify-between text-white border-b-2 border-cyan-500/30">
         <div class="flex flex-col">
             <span class="text-[10px] uppercase tracking-widest font-bold text-cyan-400">Model Run</span>
-            <select id="runSelect" class="bg-transparent text-sm font-semibold focus:outline-none cursor-pointer">
-                </select>
+            <select id="runSelect" class="bg-transparent text-sm font-semibold focus:outline-none cursor-pointer"></select>
         </div>
         <div class="text-right">
-            <div class="text-[10px] flex items-center gap-1 text-cyan-400">
+            <div class="text-[10px] flex items-center gap-1 text-cyan-400 font-bold">
                 <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
-                HRRR SUB-HOURLY
+                LIVE SUB-HOURLY
             </div>
             <div id="validTime" class="text-xs font-mono opacity-80">--:--Z</div>
         </div>
@@ -65,44 +40,40 @@
 </div>
 
 <div class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-lg z-[10]">
-    <div class="liquid-glass rounded-3xl p-4 sm:p-5 flex flex-col gap-4">
+    <div class="liquid-glass rounded-3xl p-5 flex flex-col gap-4">
         <div class="flex justify-between items-start">
             <div>
-                <div class="flex items-center gap-2">
-                    <h1 class="text-white font-bold text-base sm:text-lg leading-none">HRRR Forecast</h1>
-                    <div class="bg-cyan-500/20 text-cyan-400 text-[9px] sm:text-[10px] font-bold uppercase py-1 px-2 rounded-md border border-cyan-500/30">
-                        Precip Type
-                    </div>
-                </div>
-                <p class="text-cyan-400/80 text-[9px] sm:text-[10px] uppercase tracking-tighter mt-1">Categorical Precipitation Type</p>
+                <h1 class="text-white font-bold text-lg leading-none">HRRR Forecast</h1>
+                <p class="text-cyan-400/80 text-[10px] uppercase tracking-widest mt-1">Precipitation Type</p>
             </div>
-            <div id="frameOffset" class="text-xl sm:text-2xl font-black text-white italic tabular-nums">+00h 00m</div>
+            <div id="frameOffset" class="text-2xl font-black text-white italic tabular-nums">+00h 00m</div>
         </div>
 
         <input id="timeline" type="range" min="0" max="72" value="0">
+        
+        <div class="flex justify-between text-[9px] text-white/40 font-bold uppercase -mt-2">
+            <span>Initial</span>
+            <span>+18 Hours</span>
+        </div>
 
-        <div class="flex items-center justify-between gap-2">
-            <div class="flex gap-2">
-                <button id="playBtn" class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 hover:bg-cyan-500/40 transition-all">
-                    <svg id="playIcon" class="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                    <svg id="pauseIcon" class="w-5 h-5 sm:w-6 sm:h-6 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        <div class="flex items-center justify-between gap-4">
+            <div class="flex gap-3">
+                <button id="playBtn" class="w-12 h-12 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 hover:bg-cyan-500/40 transition-all">
+                    <svg id="playIcon" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <svg id="pauseIcon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                 </button>
-                <div class="flex flex-col justify-center">
-                    <span class="text-[9px] text-white/50 uppercase">Step</span>
-                    <div class="flex gap-3 sm:gap-4 text-white font-bold text-[10px] sm:text-xs">
-                        <button id="prevBtn" class="hover:text-cyan-400 transition-colors uppercase">Prev</button>
-                        <button id="nextBtn" class="hover:text-cyan-400 transition-colors uppercase">Next</button>
-                    </div>
+                <div class="flex flex-col justify-center gap-1">
+                    <button id="prevBtn" class="text-[10px] text-white/60 hover:text-white uppercase font-bold">Prev Step</button>
+                    <button id="nextBtn" class="text-[10px] text-white/60 hover:text-white uppercase font-bold">Next Step</button>
                 </div>
             </div>
 
-            <div class="flex flex-col items-end gap-1">
-                <div class="text-[8px] sm:text-[9px] text-white/40 uppercase">Precip Type</div>
-                <div class="w-32 sm:w-48 h-1.5 sm:h-2 rounded-full legend-preciptype border border-white/10"></div>
-                <div class="flex justify-between w-32 sm:w-48 text-[7px] sm:text-[8px] text-white/60 font-bold px-0.5">
+            <div class="flex-1 flex flex-col items-end gap-1">
+                <div class="w-full h-2 rounded-full legend-gradient border border-white/10"></div>
+                <div class="flex justify-between w-full text-[8px] text-white/80 font-bold px-1">
                     <span style="color: #00C853">RAIN</span>
                     <span style="color: #C3A1FF">MIX</span>
-                    <span style="color: #FF4500">FRZG</span>
+                    <span style="color: #FF4500">ICE</span>
                     <span style="color: #1E90FF">SNOW</span>
                 </div>
             </div>
@@ -116,96 +87,83 @@
     const runSelect = document.getElementById('runSelect');
     const timeline = document.getElementById('timeline');
     const playBtn = document.getElementById('playBtn');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
     const frameOffsetLabel = document.getElementById('frameOffset');
     const validTimeLabel = document.getElementById('validTime');
     
-    let isPlaying = false;
-    let playInterval;
-    let currentRun = "";
+    let isPlaying = false, playInterval, currentRun = "";
 
     const map = new mapboxgl.Map({
         container: 'map',
         style: 'mapbox://styles/mapbox/dark-v11',
         center: [-98.5, 38.5],
-        zoom: 3.8
+        zoom: 4,
+        fadeDuration: 0
     });
 
-    function initRuns() {
+    // Initialize model runs immediately
+    (function initRuns() {
         const now = new Date();
-        const latencyOffset = 2.5 * 3600000; 
-        const availableStartTime = now.getTime() - latencyOffset;
-        
+        const latency = 2.5 * 3600000; 
+        const start = now.getTime() - latency;
         for (let i = 0; i < 12; i++) {
-            const d = new Date(availableStartTime - i * 3600000);
-            const yr = d.getUTCFullYear();
-            const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
-            const da = String(d.getUTCDate()).padStart(2, '0');
-            const hr = String(d.getUTCHours()).padStart(2, '0');
-            
-            const val = `${yr}${mo}${da}${hr}00`;
-            const label = `${hr}Z Run (${mo}/${da})`;
-            
+            const d = new Date(start - i * 3600000);
+            const val = `${d.getUTCFullYear()}${String(d.getUTCMonth()+1).padStart(2,'0')}${String(d.getUTCDate()).padStart(2,'0')}${String(d.getUTCHours()).padStart(2,'0')}00`;
             const opt = document.createElement('option');
             opt.value = val;
-            opt.textContent = label;
+            opt.textContent = `${String(d.getUTCHours()).padStart(2,'0')}Z Run (${d.getUTCMonth()+1}/${d.getUTCDate()})`;
             runSelect.appendChild(opt);
             if (i === 0) currentRun = val;
         }
-    }
-
-    function getTileUrl(minutes) {
-        const padMin = String(minutes).padStart(4, '0');
-        return `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/hrrr::REFP-F${padMin}-${currentRun}/{z}/{x}/{y}.png`;
-    }
+    })();
 
     function updateMap() {
-        if (!map.isStyleLoaded()) return;
+        if (!map.isStyleLoaded() || !currentRun) return;
 
-        const minutes = parseInt(timeline.value) * 15;
-        frameOffsetLabel.innerText = `+${Math.floor(minutes/60)}h ${String(minutes%60).padStart(2, '0')}m`;
+        const steps = parseInt(timeline.value);
+        const totalMinutes = steps * 15;
         
-        const runDate = new Date(Date.UTC(
-            parseInt(currentRun.substring(0,4)), 
-            parseInt(currentRun.substring(4,6))-1, 
-            parseInt(currentRun.substring(6,8)), 
-            parseInt(currentRun.substring(8,10))
-        ));
-        runDate.setMinutes(runDate.getMinutes() + minutes);
+        // Update UI Text
+        frameOffsetLabel.innerText = `+${Math.floor(totalMinutes/60)}h ${String(totalMinutes%60).padStart(2, '0')}m`;
+        const runDate = new Date(Date.UTC(parseInt(currentRun.substring(0,4)), parseInt(currentRun.substring(4,6))-1, parseInt(currentRun.substring(6,8)), parseInt(currentRun.substring(8,10))));
+        runDate.setMinutes(runDate.getMinutes() + totalMinutes);
         validTimeLabel.innerText = runDate.toISOString().substring(11,16) + 'Z';
 
-        const newUrl = getTileUrl(minutes);
+        const tileUrl = `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/hrrr::REFP-F${String(totalMinutes).padStart(4, '0')}-${currentRun}/{z}/{x}/{y}.png`;
 
-        if (map.getLayer('hrrr-layer')) map.removeLayer('hrrr-layer');
-        if (map.getSource('hrrr-source')) map.removeSource('hrrr-source');
-
-        map.addSource('hrrr-source', {
-            type: 'raster',
-            tiles: [newUrl],
-            tileSize: 256
-        });
-
-        // Find first symbol (label) layer safely to put weather beneath text
-        const layers = map.getStyle().layers;
-        let firstSymbolId;
-        for (const layer of layers) {
-            if (layer.type === 'symbol') {
-                firstSymbolId = layer.id;
-                break;
+        const source = map.getSource('hrrr-source');
+        if (source) {
+            // High-speed update: swap tiles without deleting layer
+            source.setTiles([tileUrl]);
+        } else {
+            // Find the correct depth: insert below labels and borders
+            const layers = map.getStyle().layers;
+            let firstTopLayerId;
+            for (const layer of layers) {
+                if (layer.type === 'symbol' || layer.id.includes('admin') || layer.id.includes('road') || layer.id.includes('boundary')) {
+                    firstTopLayerId = layer.id;
+                    break;
+                }
             }
+
+            map.addSource('hrrr-source', { type: 'raster', tiles: [tileUrl], tileSize: 256 });
+            map.addLayer({
+                id: 'hrrr-layer',
+                type: 'raster',
+                source: 'hrrr-source',
+                paint: { 'raster-opacity': 0.8, 'raster-fade-duration': 0 }
+            }, firstTopLayerId);
         }
-
-        map.addLayer({
-            id: 'hrrr-layer',
-            type: 'raster',
-            source: 'hrrr-source',
-            paint: { 
-                'raster-opacity': 0.85,
-                'raster-fade-duration': 0 
-            }
-        }, firstSymbolId); 
     }
+
+    map.on('load', updateMap);
+    
+    // Smooth timeline interaction
+    timeline.addEventListener('input', updateMap);
+    
+    runSelect.addEventListener('change', (e) => {
+        currentRun = e.target.value;
+        updateMap();
+    });
 
     function step(dir) {
         let val = parseInt(timeline.value) + dir;
@@ -215,32 +173,16 @@
         updateMap();
     }
 
-    function togglePlay() {
+    playBtn.addEventListener('click', () => {
         isPlaying = !isPlaying;
         document.getElementById('playIcon').classList.toggle('hidden', isPlaying);
         document.getElementById('pauseIcon').classList.toggle('hidden', !isPlaying);
-        if (isPlaying) {
-            playInterval = setInterval(() => step(1), 600);
-        } else {
-            clearInterval(playInterval);
-        }
-    }
-
-    map.on('load', () => {
-        initRuns();
-        updateMap();
+        if (isPlaying) playInterval = setInterval(() => step(1), 500);
+        else clearInterval(playInterval);
     });
 
-    timeline.addEventListener('input', updateMap);
-    playBtn.addEventListener('click', togglePlay);
-    nextBtn.addEventListener('click', () => { if(isPlaying) togglePlay(); step(1); });
-    prevBtn.addEventListener('click', () => { if(isPlaying) togglePlay(); step(-1); });
-    
-    runSelect.addEventListener('change', (e) => {
-        currentRun = e.target.value;
-        updateMap();
-    });
-
+    document.getElementById('prevBtn').addEventListener('click', () => step(-1));
+    document.getElementById('nextBtn').addEventListener('click', () => step(1));
 </script>
 </body>
 </html>
