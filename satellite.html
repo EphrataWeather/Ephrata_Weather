@@ -9,8 +9,8 @@
   <style>
     :root {
       --bg: #020617;
-      --glass-bg: rgba(15, 23, 42, 0.7);
-      --glass-border: rgba(255, 255, 255, 0.08);
+      --glass-bg: rgba(7, 16, 25, 0.8);
+      --glass-border: rgba(255, 255, 255, 0.1);
       --accent: #38bdf8;
       --text: #f8fafc;
     }
@@ -25,14 +25,13 @@
       overflow: hidden;
     }
 
-    /* --- Liquid Glass UI Panel --- */
     .ui-container {
       position: absolute;
-      bottom: 24px;
+      bottom: 30px;
       left: 50%;
       transform: translateX(-50%);
       width: 90%;
-      max-width: 450px;
+      max-width: 420px;
       background: var(--glass-bg);
       backdrop-filter: blur(20px) saturate(180%);
       -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -40,89 +39,49 @@
       border-radius: 24px;
       padding: 20px;
       z-index: 10;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-    }
-
-    header {
-      margin-bottom: 16px;
-      text-align: center;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
     }
 
     header h1 {
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin: 0;
-      letter-spacing: -0.025em;
+      font-size: 1rem;
+      font-weight: 700;
+      margin: 0 0 15px 0;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 1px;
       color: var(--accent);
     }
 
-    .control-group {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
+    .control-group { display: flex; flex-direction: column; gap: 12px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 
-    .row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    /* Custom Controls Styling */
-    select, input[type="range"] {
-      background: rgba(255, 255, 255, 0.05);
+    select {
+      background: rgba(255, 255, 255, 0.08);
       border: 1px solid var(--glass-border);
       color: white;
       border-radius: 8px;
-      padding: 6px 10px;
+      padding: 6px;
       font-size: 0.85rem;
-      outline: none;
-    }
-
-    input[type="range"] {
       flex: 1;
-      height: 4px;
-      accent-color: var(--accent);
     }
 
-    .toggle-container {
-      display: flex;
-      align-items: center;
-      cursor: pointer;
-      font-size: 0.85rem;
-    }
+    input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; }
+    label { font-size: 0.8rem; font-weight: 500; min-width: 80px; }
+    .val-display { font-family: monospace; font-size: 0.8rem; width: 35px; text-align: right; }
 
-    .toggle-container input { display: none; }
+    /* Toggle Switch */
+    .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
     .slider {
-      width: 36px;
-      height: 20px;
-      background: #334155;
-      border-radius: 20px;
-      position: relative;
-      margin-right: 8px;
-      transition: .3s;
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #334155; transition: .4s; border-radius: 20px;
     }
     .slider:before {
-      content: "";
-      position: absolute;
-      width: 14px;
-      height: 14px;
-      left: 3px;
-      bottom: 3px;
-      background: white;
-      border-radius: 50%;
-      transition: .3s;
+      position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
+      background-color: white; transition: .4s; border-radius: 50%;
     }
-    input:checked + .slider { background: var(--accent); }
-    input:checked + .slider:before { transform: translateX(16px); }
-
-    label { font-size: 0.8rem; opacity: 0.8; }
-    .val-display { font-variant-numeric: tabular-nums; width: 30px; text-align: right; font-size: 0.8rem; }
-
-    @media (max-width: 480px) {
-      .ui-container { bottom: 12px; width: calc(100% - 24px); padding: 16px; }
-    }
+    input:checked + .slider { background-color: var(--accent); }
+    input:checked + .slider:before { transform: translateX(14px); }
   </style>
 </head>
 <body>
@@ -130,13 +89,10 @@
 <div id="map"></div>
 
 <div class="ui-container">
-  <header>
-    <h1>GOES-19 Satellite Monitor</h1>
-  </header>
-
+  <header><h1>Satellite Monitor</h1></header>
   <div class="control-group">
     <div class="row">
-      <label>Satellite Channel</label>
+      <label>Channel</label>
       <select id="channelSelect">
         <option value="goes-east-vis-1km-900913">Visible (1km)</option>
         <option value="goes-east-ir-4km-900913">Infrared (4km)</option>
@@ -146,40 +102,39 @@
 
     <div class="row">
       <label>Sat Opacity</label>
-      <input type="range" id="satOpacity" min="0" max="1" step="0.01" value="0.9">
-      <span class="val-display" id="satVal">0.90</span>
+      <input type="range" id="satOpacity" min="0" max="1" step="0.01" value="0.8">
+      <span class="val-display" id="satVal">0.80</span>
     </div>
 
-    <div class="row" style="margin-top: 4px; border-top: 1px solid var(--glass-border); padding-top: 12px;">
-      <label class="toggle-container">
-        <input type="checkbox" id="radarToggle" checked>
-        <div class="slider"></div>
-        NEXRAD Radar
+    <div class="row" style="margin-top: 5px; padding-top: 10px; border-top: 1px solid var(--glass-border);">
+      <label style="display:flex; align-items:center; gap:8px;">
+        <span class="switch"><input type="checkbox" id="radarToggle" checked><span class="slider"></span></span>
+        Radar
       </label>
       <input type="range" id="radarOpacity" min="0" max="1" step="0.01" value="0.6">
       <span class="val-display" id="radarVal">0.60</span>
     </div>
 
     <div class="row">
-      <label>Basemap</label>
+      <label>Theme</label>
       <select id="basemapSelect">
-        <option value="mapbox://styles/mapbox/dark-v11">Dark Vector</option>
-        <option value="mapbox://styles/mapbox/satellite-v9">Satellite Imagery</option>
+        <option value="mapbox://styles/mapbox/dark-v11">Navy Glass (Dark)</option>
+        <option value="mapbox://styles/mapbox/satellite-v9">Satellite Base</option>
       </select>
     </div>
   </div>
 </div>
 
 <script>
-  // IMPORTANT: Replace with your Mapbox Access Token
+  // Replace with your token
   mapboxgl.accessToken = 'pk.eyJ1IjoiZ3RnMDExNiIsImEiOiJjbWxsODV6NXAwNThmM2ZwdWlkYm0xNjFlIn0.vI186twXYzY45nnuV5FucQ';
 
   const map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/dark-v11',
-    center: [-95, 38],
+    center: [-98, 38],
     zoom: 3,
-    projection: 'globe' // Modern globe view
+    projection: 'globe'
   });
 
   const satSelect = document.getElementById('channelSelect');
@@ -188,29 +143,26 @@
   const radarRange = document.getElementById('radarOpacity');
   const baseSelect = document.getElementById('basemapSelect');
 
-  map.on('load', () => {
-    // Set atmospheric styling for globe
-    map.setFog({
-      'color': 'rgb(7, 16, 25)',
-      'high-color': 'rgb(13, 27, 43)',
-      'horizon-blend': 0.1
-    });
-
-    addSatelliteLayer(satSelect.value);
-    addRadarLayer();
-  });
-
-  function addSatelliteLayer(channel) {
-    const url = `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/${channel}/{z}/{x}/{y}.png`;
-    
-    if (map.getSource('sat-source')) {
-      map.removeLayer('sat-layer');
-      map.removeSource('sat-source');
+  // Helper to safely find the first symbol (label) layer to tuck imagery under
+  function getFirstLabelId() {
+    const layers = map.getStyle().layers;
+    for (let i = 0; i < layers.length; i++) {
+      if (layers[i].type === 'symbol') return layers[i].id;
     }
+    return null;
+  }
+
+  function updateLayers() {
+    const channel = satSelect.value;
+    const labelId = getFirstLabelId();
+
+    // 1. Manage Satellite Source/Layer
+    if (map.getLayer('sat-layer')) map.removeLayer('sat-layer');
+    if (map.getSource('sat-source')) map.removeSource('sat-source');
 
     map.addSource('sat-source', {
       type: 'raster',
-      tiles: [url],
+      tiles: [`https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/${channel}/{z}/{x}/{y}.png`],
       tileSize: 256
     });
 
@@ -219,10 +171,12 @@
       type: 'raster',
       source: 'sat-source',
       paint: { 'raster-opacity': parseFloat(satRange.value) }
-    }, 'road-label'); // Add below labels
-  }
+    }, labelId); // Insert below labels if they exist
 
-  function addRadarLayer() {
+    // 2. Manage Radar Source/Layer
+    if (map.getLayer('radar-layer')) map.removeLayer('radar-layer');
+    if (map.getSource('radar-source')) map.removeSource('radar-source');
+
     map.addSource('radar-source', {
       type: 'raster',
       tiles: ['https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png'],
@@ -235,11 +189,21 @@
       source: 'radar-source',
       layout: { visibility: radarToggle.checked ? 'visible' : 'none' },
       paint: { 'raster-opacity': parseFloat(radarRange.value) }
-    });
+    }, labelId);
   }
 
-  // Event Listeners
-  satSelect.onchange = () => addSatelliteLayer(satSelect.value);
+  map.on('load', () => {
+    map.setFog({ 'color': '#020617', 'high-color': '#0f172a', 'horizon-blend': 0.1 });
+    updateLayers();
+  });
+
+  // Re-run setup when basemap style finishes changing
+  map.on('style.load', () => {
+    // Only update if map is already initialized
+    if (map.isStyleLoaded()) updateLayers();
+  });
+
+  satSelect.onchange = updateLayers;
   
   satRange.oninput = (e) => {
     const val = parseFloat(e.target.value);
@@ -248,7 +212,9 @@
   };
 
   radarToggle.onchange = (e) => {
-    map.setLayoutProperty('radar-layer', 'visibility', e.target.checked ? 'visible' : 'none');
+    if (map.getLayer('radar-layer')) {
+      map.setLayoutProperty('radar-layer', 'visibility', e.target.checked ? 'visible' : 'none');
+    }
   };
 
   radarRange.oninput = (e) => {
@@ -259,13 +225,7 @@
 
   baseSelect.onchange = () => {
     map.setStyle(baseSelect.value);
-    // Sources/layers need to be re-added on style change
-    map.once('style.load', () => {
-      addSatelliteLayer(satSelect.value);
-      addRadarLayer();
-    });
   };
 </script>
-
 </body>
 </html>
