@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GOES-19 Global Monitor | Mapbox</title>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #020617;
+      --glass-bg: rgba(15, 23, 42, 0.7);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --accent: #38bdf8;
+      --text: #f8fafc;
+    }
+
+    body, html, #map {
+      margin: 0;
+      height: 100%;
+      width: 100%;
+      background: var(--bg);
+      font-family: 'Inter', -apple-system, system-ui, sans-serif;
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    /* --- Liquid Glass UI Panel --- */
+    .ui-container {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 450px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      padding: 20px;
+      z-index: 10;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    header {
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0;
+      letter-spacing: -0.025em;
+      color: var(--accent);
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    /* Custom Controls Styling */
+    select, input[type="range"] {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border);
+      color: white;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      outline: none;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      height: 4px;
+      accent-color: var(--accent);
+    }
+
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    .toggle-container input { display: none; }
+    .slider {
+      width: 36px;
+      height: 20px;
+      background: #334155;
+      border-radius: 20px;
+      position: relative;
+      margin-right: 8px;
+      transition: .3s;
+    }
+    .slider:before {
+      content: "";
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: .3s;
+    }
+    input:checked + .slider { background: var(--accent); }
+    input:checked + .slider:before { transform: translateX(16px); }
+
+    label { font-size: 0.8rem; opacity: 0.8; }
+    .val-display { font-variant-numeric: tabular-nums; width: 30px; text-align: right; font-size: 0.8rem; }
+
+    @media (max-width: 480px) {
+      .ui-container { bottom: 12px; width: calc(100% - 24px); padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="ui-container">
+  <header>
+    <h1>GOES-19 Satellite Monitor</h1>
+  </header>
+
+  <div class="control-group">
+    <div class="row">
+      <label>Satellite Channel</label>
+      <select id="channelSelect">
+        <option value="goes-east-vis-1km-900913">Visible (1km)</option>
+        <option value="goes-east-ir-4km-900913">Infrared (4km)</option>
+        <option value="goes-east-wv-4km-900913">Water Vapor (4km)</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label>Sat Opacity</label>
+      <input type="range" id="satOpacity" min="0" max="1" step="0.01" value="0.9">
+      <span class="val-display" id="satVal">0.90</span>
+    </div>
+
+    <div class="row" style="margin-top: 4px; border-top: 1px solid var(--glass-border); padding-top: 12px;">
+      <label class="toggle-container">
+        <input type="checkbox" id="radarToggle" checked>
+        <div class="slider"></div>
+        NEXRAD Radar
+      </label>
+      <input type="range" id="radarOpacity" min="0" max="1" step="0.01" value="0.6">
+      <span class="val-display" id="radarVal">0.60</span>
+    </div>
+
+    <div class="row">
+      <label>Basemap</label>
+      <select id="basemapSelect">
+        <option value="mapbox://styles/mapbox/dark-v11">Dark Vector</option>
+        <option value="mapbox://styles/mapbox/satellite-v9">Satellite Imagery</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<script>
+  // IMPORTANT: Replace with your Mapbox Access Token
+  mapboxgl.accessToken = 'pk.eyJ1IjoiZ3RnMDExNiIsImEiOiJjbWxsODV6NXAwNThmM2ZwdWlkYm0xNjFlIn0.vI186twXYzY45nnuV5FucQ';
+
+  const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/dark-v11',
+    center: [-95, 38],
+    zoom: 3,
+    projection: 'globe' // Modern globe view
+  });
+
+  const satSelect = document.getElementById('channelSelect');
+  const satRange = document.getElementById('satOpacity');
+  const radarToggle = document.getElementById('radarToggle');
+  const radarRange = document.getElementById('radarOpacity');
+  const baseSelect = document.getElementById('basemapSelect');
+
+  map.on('load', () => {
+    // Set atmospheric styling for globe
+    map.setFog({
+      'color': 'rgb(7, 16, 25)',
+      'high-color': 'rgb(13, 27, 43)',
+      'horizon-blend': 0.1
+    });
+
+    addSatelliteLayer(satSelect.value);
+    addRadarLayer();
+  });
+
+  function addSatelliteLayer(channel) {
+    const url = `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/${channel}/{z}/{x}/{y}.png`;
+    
+    if (map.getSource('sat-source')) {
+      map.removeLayer('sat-layer');
+      map.removeSource('sat-source');
+    }
+
+    map.addSource('sat-source', {
+      type: 'raster',
+      tiles: [url],
+      tileSize: 256
+    });
+
+    map.addLayer({
+      id: 'sat-layer',
+      type: 'raster',
+      source: 'sat-source',
+      paint: { 'raster-opacity': parseFloat(satRange.value) }
+    }, 'road-label'); // Add below labels
+  }
+
+  function addRadarLayer() {
+    map.addSource('radar-source', {
+      type: 'raster',
+      tiles: ['https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png'],
+      tileSize: 256
+    });
+
+    map.addLayer({
+      id: 'radar-layer',
+      type: 'raster',
+      source: 'radar-source',
+      layout: { visibility: radarToggle.checked ? 'visible' : 'none' },
+      paint: { 'raster-opacity': parseFloat(radarRange.value) }
+    });
+  }
+
+  // Event Listeners
+  satSelect.onchange = () => addSatelliteLayer(satSelect.value);
+  
+  satRange.oninput = (e) => {
+    const val = parseFloat(e.target.value);
+    document.getElementById('satVal').innerText = val.toFixed(2);
+    if (map.getLayer('sat-layer')) map.setPaintProperty('sat-layer', 'raster-opacity', val);
+  };
+
+  radarToggle.onchange = (e) => {
+    map.setLayoutProperty('radar-layer', 'visibility', e.target.checked ? 'visible' : 'none');
+  };
+
+  radarRange.oninput = (e) => {
+    const val = parseFloat(e.target.value);
+    document.getElementById('radarVal').innerText = val.toFixed(2);
+    if (map.getLayer('radar-layer')) map.setPaintProperty('radar-layer', 'raster-opacity', val);
+  };
+
+  baseSelect.onchange = () => {
+    map.setStyle(baseSelect.value);
+    // Sources/layers need to be re-added on style change
+    map.once('style.load', () => {
+      addSatelliteLayer(satSelect.value);
+      addRadarLayer();
+    });
+  };
+</script>
+
+</body>
+</html>
