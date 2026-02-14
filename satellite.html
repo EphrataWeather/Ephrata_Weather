@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GOES-19 Global Monitor | Mapbox</title>
+  <title>GOES-19 Navy Monitor</title>
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet" />
   <style>
     :root {
       --bg: #020617;
-      --glass-bg: rgba(7, 16, 25, 0.8);
-      --glass-border: rgba(255, 255, 255, 0.1);
+      --glass-bg: rgba(7, 16, 25, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.12);
       --accent: #38bdf8;
       --text: #f8fafc;
     }
@@ -20,68 +20,76 @@
       height: 100%;
       width: 100%;
       background: var(--bg);
-      font-family: 'Inter', -apple-system, system-ui, sans-serif;
+      font-family: 'Inter', -apple-system, sans-serif;
       color: var(--text);
       overflow: hidden;
     }
 
+    /* Modern Liquid Glass UI */
     .ui-container {
       position: absolute;
-      bottom: 30px;
+      bottom: 24px;
       left: 50%;
       transform: translateX(-50%);
       width: 90%;
       max-width: 420px;
       background: var(--glass-bg);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      backdrop-filter: blur(25px) saturate(160%);
+      -webkit-backdrop-filter: blur(25px) saturate(160%);
       border: 1px solid var(--glass-border);
-      border-radius: 24px;
-      padding: 20px;
+      border-radius: 28px;
+      padding: 22px;
       z-index: 10;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
     }
 
     header h1 {
-      font-size: 1rem;
-      font-weight: 700;
-      margin: 0 0 15px 0;
+      font-size: 0.9rem;
+      font-weight: 800;
+      margin: 0 0 18px 0;
       text-align: center;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
       color: var(--accent);
+      opacity: 0.9;
     }
 
-    .control-group { display: flex; flex-direction: column; gap: 12px; }
+    .control-group { display: flex; flex-direction: column; gap: 14px; }
     .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 
     select {
-      background: rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--glass-border);
       color: white;
-      border-radius: 8px;
-      padding: 6px;
+      border-radius: 10px;
+      padding: 8px;
       font-size: 0.85rem;
       flex: 1;
+      cursor: pointer;
     }
 
-    input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; }
-    label { font-size: 0.8rem; font-weight: 500; min-width: 80px; }
-    .val-display { font-family: monospace; font-size: 0.8rem; width: 35px; text-align: right; }
+    input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; height: 4px; }
+    label { font-size: 0.75rem; font-weight: 600; min-width: 85px; text-transform: uppercase; opacity: 0.7; }
+    .val-display { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; width: 35px; text-align: right; color: var(--accent); }
 
-    /* Toggle Switch */
-    .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
+    /* Custom Switch */
+    .switch { position: relative; display: inline-block; width: 36px; height: 20px; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider {
       position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-      background-color: #334155; transition: .4s; border-radius: 20px;
+      background-color: #1e293b; transition: .3s; border-radius: 20px;
+      border: 1px solid var(--glass-border);
     }
     .slider:before {
-      position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
-      background-color: white; transition: .4s; border-radius: 50%;
+      position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px;
+      background-color: white; transition: .3s; border-radius: 50%;
     }
-    input:checked + .slider { background-color: var(--accent); }
-    input:checked + .slider:before { transform: translateX(14px); }
+    input:checked + .slider { background-color: var(--accent); border-color: transparent; }
+    input:checked + .slider:before { transform: translateX(16px); }
+
+    @media (max-width: 480px) {
+      .ui-container { bottom: 15px; width: calc(100% - 30px); padding: 18px; }
+    }
   </style>
 </head>
 <body>
@@ -92,48 +100,40 @@
   <header><h1>Satellite Monitor</h1></header>
   <div class="control-group">
     <div class="row">
-      <label>Channel</label>
+      <label>Imagery</label>
       <select id="channelSelect">
-        <option value="goes-east-vis-1km-900913">Visible (1km)</option>
-        <option value="goes-east-ir-4km-900913">Infrared (4km)</option>
-        <option value="goes-east-wv-4km-900913">Water Vapor (4km)</option>
+        <option value="goes-east-vis-1km-900913">Visible High-Res</option>
+        <option value="goes-east-ir-4km-900913">Infrared (Heat)</option>
+        <option value="goes-east-wv-4km-900913">Water Vapor</option>
       </select>
     </div>
 
     <div class="row">
-      <label>Sat Opacity</label>
-      <input type="range" id="satOpacity" min="0" max="1" step="0.01" value="0.8">
-      <span class="val-display" id="satVal">0.80</span>
+      <label>Intensity</label>
+      <input type="range" id="satOpacity" min="0" max="1" step="0.01" value="0.75">
+      <span class="val-display" id="satVal">0.75</span>
     </div>
 
-    <div class="row" style="margin-top: 5px; padding-top: 10px; border-top: 1px solid var(--glass-border);">
-      <label style="display:flex; align-items:center; gap:8px;">
+    <div class="row" style="margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--glass-border);">
+      <label style="display:flex; align-items:center; gap:10px;">
         <span class="switch"><input type="checkbox" id="radarToggle" checked><span class="slider"></span></span>
         Radar
       </label>
-      <input type="range" id="radarOpacity" min="0" max="1" step="0.01" value="0.6">
+      <input type="range" id="radarOpacity" min="0" max="1" step="0.01" value="0.60">
       <span class="val-display" id="radarVal">0.60</span>
-    </div>
-
-    <div class="row">
-      <label>Theme</label>
-      <select id="basemapSelect">
-        <option value="mapbox://styles/mapbox/dark-v11">Navy Glass (Dark)</option>
-        <option value="mapbox://styles/mapbox/satellite-v9">Satellite Base</option>
-      </select>
     </div>
   </div>
 </div>
 
 <script>
-  // Replace with your token
-  mapboxgl.accessToken = 'pk.eyJ1IjoiZ3RnMDExNiIsImEiOiJjbWxsODV6NXAwNThmM2ZwdWlkYm0xNjFlIn0.vI186twXYzY45nnuV5FucQ';
+  // Add your Mapbox Access Token here
+  mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN';
 
   const map = new mapboxgl.Map({
     container: 'map',
-    style: 'mapbox://styles/mapbox/dark-v11',
-    center: [-98, 38],
-    zoom: 3,
+    style: 'mapbox://styles/mapbox/dark-v11', // Navy-centric Dark Style
+    center: [-96, 37.5],
+    zoom: 3.5,
     projection: 'globe'
   });
 
@@ -141,22 +141,27 @@
   const satRange = document.getElementById('satOpacity');
   const radarToggle = document.getElementById('radarToggle');
   const radarRange = document.getElementById('radarOpacity');
-  const baseSelect = document.getElementById('basemapSelect');
 
-  // Helper to safely find the first symbol (label) layer to tuck imagery under
-  function getFirstLabelId() {
+  /**
+   * Finds the first layer that should appear ABOVE the imagery.
+   * We look for 'symbol' (labels) and 'line' (borders/roads) layers.
+   */
+  function getAnchorLayerId() {
     const layers = map.getStyle().layers;
-    for (let i = 0; i < layers.length; i++) {
-      if (layers[i].type === 'symbol') return layers[i].id;
+    // We want to find the first layer that is a label or a boundary/road line
+    for (const layer of layers) {
+      if (layer.type === 'symbol' || (layer.type === 'line' && layer.id.includes('admin'))) {
+        return layer.id;
+      }
     }
     return null;
   }
 
-  function updateLayers() {
+  function renderLayers() {
     const channel = satSelect.value;
-    const labelId = getFirstLabelId();
+    const anchorId = getAnchorLayerId();
 
-    // 1. Manage Satellite Source/Layer
+    // 1. Satellite Layer Setup
     if (map.getLayer('sat-layer')) map.removeLayer('sat-layer');
     if (map.getSource('sat-source')) map.removeSource('sat-source');
 
@@ -171,9 +176,9 @@
       type: 'raster',
       source: 'sat-source',
       paint: { 'raster-opacity': parseFloat(satRange.value) }
-    }, labelId); // Insert below labels if they exist
+    }, anchorId); // Injected BELOW the anchor (labels/borders)
 
-    // 2. Manage Radar Source/Layer
+    // 2. Radar Layer Setup
     if (map.getLayer('radar-layer')) map.removeLayer('radar-layer');
     if (map.getSource('radar-source')) map.removeSource('radar-source');
 
@@ -189,21 +194,24 @@
       source: 'radar-source',
       layout: { visibility: radarToggle.checked ? 'visible' : 'none' },
       paint: { 'raster-opacity': parseFloat(radarRange.value) }
-    }, labelId);
+    }, anchorId);
   }
 
   map.on('load', () => {
-    map.setFog({ 'color': '#020617', 'high-color': '#0f172a', 'horizon-blend': 0.1 });
-    updateLayers();
+    // Atmospheric "Liquid" Globe Effects
+    map.setFog({
+      'color': '#020617',
+      'high-color': '#070a14',
+      'horizon-blend': 0.15,
+      'space-color': '#000000',
+      'star-intensity': 0.15
+    });
+    
+    renderLayers();
   });
 
-  // Re-run setup when basemap style finishes changing
-  map.on('style.load', () => {
-    // Only update if map is already initialized
-    if (map.isStyleLoaded()) updateLayers();
-  });
-
-  satSelect.onchange = updateLayers;
+  // UI Updates
+  satSelect.onchange = renderLayers;
   
   satRange.oninput = (e) => {
     const val = parseFloat(e.target.value);
@@ -222,10 +230,7 @@
     document.getElementById('radarVal').innerText = val.toFixed(2);
     if (map.getLayer('radar-layer')) map.setPaintProperty('radar-layer', 'raster-opacity', val);
   };
-
-  baseSelect.onchange = () => {
-    map.setStyle(baseSelect.value);
-  };
 </script>
+
 </body>
 </html>
