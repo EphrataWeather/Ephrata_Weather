@@ -237,9 +237,14 @@
                 minZoom: 2
             }).setView([39.0, -98.0], 4); 
 
-            // 1. BASE LAYER: One clean map layer. No transparency stacks.
+            // Create a custom pane for labels so they float above the radar layer
+            const labelPane = map.createPane('labels-top');
+            labelPane.style.zIndex = 650; // Between radar (400) and UI (2000)
+            labelPane.style.pointerEvents = 'none';
+
+            // 1. BASE LAYER (The background)
             if (mapboxAccessToken && mapboxAccessToken.length > 5) {
-                // Single Mapbox Dark Layer with labels already included
+                // Mapbox Dark Background Only
                 L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=${mapboxAccessToken}`, {
                     attribution: '© Mapbox',
                     tileSize: 512,
@@ -247,12 +252,20 @@
                     maxZoom: 19
                 }).addTo(map);
             } else {
-                // Standard OpenStreetMap for maximum clarity when no token provided
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; OSM',
+                // CartoDB Dark No Labels (Clean background)
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; CartoDB',
                     maxZoom: 19 
                 }).addTo(map);
             }
+
+            // 2. OVERLAY LABELS (The town names and borders)
+            // We use the CartoDB labels layer because it is transparent and high-contrast
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+                pane: 'labels-top',
+                maxZoom: 19,
+                opacity: 0.9
+            }).addTo(map);
 
             fetchRadarData();
             
@@ -303,7 +316,7 @@
             radarLayer = L.tileLayer('', {
                 tileSize: 256,
                 opacity: 0.85, 
-                zIndex: 1000, 
+                zIndex: 400, // Explicitly below the label pane (650)
                 maxNativeZoom: 7, 
                 maxZoom: 12       
             }).addTo(map);
