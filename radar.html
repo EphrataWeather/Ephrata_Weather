@@ -10,12 +10,12 @@
     
     <style>
         :root {
-            --glass-bg: rgba(15, 23, 42, 0.75);
+            --glass-bg: rgba(15, 23, 42, 0.85);
             --glass-border: rgba(255, 255, 255, 0.15);
-            --glass-blur: blur(15px);
+            --glass-blur: blur(20px);
             --text-color: #ffffff;
             --input-bg: rgba(255, 255, 255, 0.1); 
-            --primary-dark: #0f172a;
+            --primary-dark: #020617; 
         }
 
         body, html {
@@ -50,8 +50,8 @@
             backdrop-filter: var(--glass-blur);
             -webkit-backdrop-filter: var(--glass-blur);
             border: 1px solid var(--glass-border);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5); 
-            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6); 
+            border-radius: 24px;
             color: var(--text-color);
             display: flex;
             flex-direction: column;
@@ -72,17 +72,19 @@
         }
 
         .time-display {
-            font-size: 1.2rem;
-            font-weight: 700;
+            font-size: 1.3rem;
+            font-weight: 800;
             text-shadow: 0 2px 4px rgba(0,0,0,0.5);
             white-space: nowrap;
+            letter-spacing: -0.5px;
         }
         
         .status-badge {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            opacity: 0.8;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+            color: #94a3b8;
             display: block;
             margin-bottom: 2px;
         }
@@ -92,22 +94,22 @@
             align-items: center;
             font-size: 0.9rem;
             font-weight: 600;
-            background: rgba(255,255,255,0.05); 
-            padding: 4px 10px;
-            border-radius: 8px;
+            background: rgba(255,255,255,0.08); 
+            padding: 6px 12px;
+            border-radius: 12px;
             white-space: nowrap;
             gap: 10px; 
+            border: 1px solid rgba(255,255,255,0.1);
         }
 
         #speed-select {
-            background-color: var(--input-bg);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 6px;
-            padding: 4px 8px;
+            background-color: transparent;
+            border: none;
             color: var(--text-color);
             font-size: 0.85rem;
             cursor: pointer;
             outline: none;
+            font-weight: 700;
         }
 
         .legend-group {
@@ -122,10 +124,10 @@
 
         .legend-bar {
             width: 80px;
-            height: 8px;
-            border-radius: 4px;
+            height: 6px;
+            border-radius: 10px;
             background: linear-gradient(to right, #8ED2CD 0%, #00CC00 25%, #FFFF00 50%, #FF0000 75%, #800080 100%);
-            border: 1px solid rgba(255,255,255,0.4);
+            border: 1px solid rgba(255,255,255,0.3);
         }
         
         .controls-row {
@@ -136,34 +138,35 @@
         }
 
         .play-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.4);
+            background: #ffffff;
+            border: none;
             border-radius: 50%;
-            width: 42px;
-            height: 42px;
+            width: 44px;
+            height: 44px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
-        .play-btn:hover { background: rgba(255, 255, 255, 0.4); transform: scale(1.05); }
-        .play-icon { width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-left: 10px solid white; margin-left: 3px; }
-        .pause-icon { width: 10px; height: 12px; border-left: 3px solid white; border-right: 3px solid white; }
+        .play-btn:hover { transform: scale(1.1); }
+
+        .play-icon { width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-left: 12px solid #0f172a; margin-left: 4px; }
+        .pause-icon { width: 12px; height: 14px; border-left: 4px solid #0f172a; border-right: 4px solid #0f172a; }
 
         input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: #ffffff; cursor: pointer; margin-top: -7px; box-shadow: 0 0 8px rgba(0,0,0,0.5); }
-        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: rgba(255,255,255,0.4); border-radius: 2px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #ffffff; cursor: pointer; margin-top: -8px; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: rgba(255,255,255,0.3); border-radius: 2px; }
         
-        .loader { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid white; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; display: none; z-index: 3000; }
+        .loader { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid white; border-radius: 50%; width: 40px; height: 40px; animation: spin 0.8s linear infinite; display: none; z-index: 3000; }
         @keyframes spin { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
 
         @media (max-width: 600px) {
-            .header-row { flex-wrap: wrap; gap: 10px; }
+            .header-row { flex-wrap: wrap; gap: 8px; }
             .time-group { width: 100%; text-align: center; }
             .speed-control, .legend-group { flex-grow: 1; justify-content: center; }
-            .legend-group span { display: none; }
         }
     </style>
 </head>
@@ -175,7 +178,7 @@
     <div class="bottom-ui-panel">
         <div class="header-row">
             <div class="time-group">
-                <span class="status-badge">Radar Time</span>
+                <span class="status-badge">Live Radar Feed</span>
                 <div class="time-display" id="timestamp">Loading...</div>
             </div>
             <div class="speed-control">
@@ -202,7 +205,9 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        // Paste your token here
         const mapboxAccessToken = 'pk.eyJ1IjoiZ3RnMDExNiIsImEiOiJjbWxsODV6NXAwNThmM2ZwdWlkYm0xNjFlIn0.vI186twXYzY45nnuV5FucQ'; 
+        
         const apiDataUrl = 'https://api.rainviewer.com/public/weather-maps.json';
         const tileSize = 256;
         const colorScheme = 2; 
@@ -232,41 +237,20 @@
                 minZoom: 2
             }).setView([39.0, -98.0], 4); 
 
-            // Create a pane for labels that is ABOVE the radar data
-            const labelPane = map.createPane('labels');
-            labelPane.style.zIndex = 650; 
-            labelPane.style.pointerEvents = 'none';
-
+            // 1. BASE LAYER: One clean map layer. No transparency stacks.
             if (mapboxAccessToken && mapboxAccessToken.length > 5) {
-                // BASE LAYER: Dark background WITHOUT labels
-                // We use a specific Mapbox style that is optimized for backgrounds
+                // Single Mapbox Dark Layer with labels already included
                 L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=${mapboxAccessToken}`, {
                     attribution: '© Mapbox',
                     tileSize: 512,
                     zoomOffset: -1,
                     maxZoom: 19
                 }).addTo(map);
-
-                // TOP LAYER: Only Labels and Borders
-                // This uses the same dark style but filters for labels (this requires a specific mapbox style URL usually, 
-                // but for Leaflet we'll use a clean dark overlay style)
-                L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/navigation-guidance-night-v4/tiles/{z}/{x}/{y}?access_token=${mapboxAccessToken}`, {
-                    pane: 'labels',
-                    tileSize: 512,
-                    zoomOffset: -1,
-                    opacity: 0.9
-                }).addTo(map);
             } else {
-                // FALLBACK: CartoDB Dark Matter (No Labels)
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; CartoDB',
+                // Standard OpenStreetMap for maximum clarity when no token provided
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OSM',
                     maxZoom: 19 
-                }).addTo(map);
-
-                // FALLBACK: CartoDB Labels Only (In the high pane)
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
-                    pane: 'labels',
-                    maxZoom: 19
                 }).addTo(map);
             }
 
@@ -275,7 +259,7 @@
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(position => {
                     map.setView([position.coords.latitude, position.coords.longitude], 7);
-                });
+                }, () => {}, { timeout: 5000 });
             }
         }
 
@@ -310,7 +294,7 @@
                 })
                 .catch(error => {
                     console.error("Error fetching radar data:", error);
-                    timeDisplay.innerText = "Data Unavailable";
+                    timeDisplay.innerText = "Data Offline";
                     loader.style.display = 'none';
                 });
         }
@@ -318,8 +302,8 @@
         function initRadarLayer() {
             radarLayer = L.tileLayer('', {
                 tileSize: 256,
-                opacity: 0.7,
-                zIndex: 400, // Explicitly below our labels pane (650)
+                opacity: 0.85, 
+                zIndex: 1000, 
                 maxNativeZoom: 7, 
                 maxZoom: 12       
             }).addTo(map);
