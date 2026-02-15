@@ -40,7 +40,7 @@
             bottom: 25px; 
             left: 50%;
             transform: translateX(-50%);
-            z-index: 2000; /* Higher than map panes */
+            z-index: 2000; 
             width: 90%;
             max-width: 800px;
             padding: 15px 20px;
@@ -232,35 +232,38 @@
                 minZoom: 2
             }).setView([39.0, -98.0], 4); 
 
-            // --- CRITICAL: Create a custom pane for labels ---
-            // This pane will stay on top of the radar layer (zIndex 10)
+            // Create a pane for labels that is ABOVE the radar data
             const labelPane = map.createPane('labels');
-            labelPane.style.zIndex = 650; // Higher than tileLayers (200) and overlayPanes (400)
-            labelPane.style.pointerEvents = 'none'; // Ensure you can still interact with map underneath
+            labelPane.style.zIndex = 650; 
+            labelPane.style.pointerEvents = 'none';
 
-            // 1. Base Dark Layer (Background)
             if (mapboxAccessToken && mapboxAccessToken.length > 5) {
-                // Mapbox Dark Base
-                L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=' + mapboxAccessToken, {
+                // BASE LAYER: Dark background WITHOUT labels
+                // We use a specific Mapbox style that is optimized for backgrounds
+                L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=${mapboxAccessToken}`, {
                     attribution: '© Mapbox',
                     tileSize: 512,
                     zoomOffset: -1,
                     maxZoom: 19
                 }).addTo(map);
 
-                // Mapbox Labels (Placed in the high-priority pane)
-                L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/{z}/{x}/{y}?access_token=' + mapboxAccessToken, {
+                // TOP LAYER: Only Labels and Borders
+                // This uses the same dark style but filters for labels (this requires a specific mapbox style URL usually, 
+                // but for Leaflet we'll use a clean dark overlay style)
+                L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/navigation-guidance-night-v4/tiles/{z}/{x}/{y}?access_token=${mapboxAccessToken}`, {
                     pane: 'labels',
-                    opacity: 0.7
+                    tileSize: 512,
+                    zoomOffset: -1,
+                    opacity: 0.9
                 }).addTo(map);
             } else {
-                // CartoDB Dark Matter Base (No labels)
+                // FALLBACK: CartoDB Dark Matter (No Labels)
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
                     attribution: '&copy; CartoDB',
                     maxZoom: 19 
                 }).addTo(map);
 
-                // CartoDB Labels Only (Placed in the high-priority pane)
+                // FALLBACK: CartoDB Labels Only (In the high pane)
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
                     pane: 'labels',
                     maxZoom: 19
@@ -315,8 +318,8 @@
         function initRadarLayer() {
             radarLayer = L.tileLayer('', {
                 tileSize: 256,
-                opacity: 0.8,
-                zIndex: 400, // Below our labels pane (650)
+                opacity: 0.7,
+                zIndex: 400, // Explicitly below our labels pane (650)
                 maxNativeZoom: 7, 
                 maxZoom: 12       
             }).addTo(map);
