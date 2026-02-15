@@ -40,7 +40,7 @@
             bottom: 25px; 
             left: 50%;
             transform: translateX(-50%);
-            z-index: 1000;
+            z-index: 2000; /* Higher than map panes */
             width: 90%;
             max-width: 800px;
             padding: 15px 20px;
@@ -156,7 +156,7 @@
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: #ffffff; cursor: pointer; margin-top: -7px; box-shadow: 0 0 8px rgba(0,0,0,0.5); }
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: rgba(255,255,255,0.4); border-radius: 2px; }
         
-        .loader { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid white; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; display: none; z-index: 500; }
+        .loader { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid white; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; display: none; z-index: 3000; }
         @keyframes spin { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
 
         @media (max-width: 600px) {
@@ -212,7 +212,7 @@
         let map;
         let timestamps = [];
         let apiResponse = {};
-        let radarLayer = null; // Single persistent layer
+        let radarLayer = null; 
         let currentIndex = 0;
         let isPlaying = false;
         let animationInterval;
@@ -232,17 +232,38 @@
                 minZoom: 2
             }).setView([39.0, -98.0], 4); 
 
+            // --- CRITICAL: Create a custom pane for labels ---
+            // This pane will stay on top of the radar layer (zIndex 10)
+            const labelPane = map.createPane('labels');
+            labelPane.style.zIndex = 650; // Higher than tileLayers (200) and overlayPanes (400)
+            labelPane.style.pointerEvents = 'none'; // Ensure you can still interact with map underneath
+
+            // 1. Base Dark Layer (Background)
             if (mapboxAccessToken && mapboxAccessToken.length > 5) {
+                // Mapbox Dark Base
                 L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=' + mapboxAccessToken, {
                     attribution: '© Mapbox',
                     tileSize: 512,
                     zoomOffset: -1,
                     maxZoom: 19
                 }).addTo(map);
+
+                // Mapbox Labels (Placed in the high-priority pane)
+                L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/{z}/{x}/{y}?access_token=' + mapboxAccessToken, {
+                    pane: 'labels',
+                    opacity: 0.7
+                }).addTo(map);
             } else {
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                // CartoDB Dark Matter Base (No labels)
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
                     attribution: '&copy; CartoDB',
                     maxZoom: 19 
+                }).addTo(map);
+
+                // CartoDB Labels Only (Placed in the high-priority pane)
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+                    pane: 'labels',
+                    maxZoom: 19
                 }).addTo(map);
             }
 
@@ -279,7 +300,6 @@
                             }
                         });
                         
-                        // Initialize the persistent radar layer once
                         initRadarLayer();
                         showFrame(closestIndex);
                     }
@@ -293,11 +313,10 @@
         }
 
         function initRadarLayer() {
-            // Create a placeholder layer that we will update the URL for
             radarLayer = L.tileLayer('', {
                 tileSize: 256,
                 opacity: 0.8,
-                zIndex: 10,
+                zIndex: 400, // Below our labels pane (650)
                 maxNativeZoom: 7, 
                 maxZoom: 12       
             }).addTo(map);
@@ -330,9 +349,6 @@
             timeDisplay.innerText = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
             const newUrl = `${apiResponse.host}${tsObj.path}/${tileSize}/{z}/{x}/{y}/${colorScheme}/${smoothOption}_${snowOption}.png`;
-            
-            // OPTIMIZATION: Instead of creating a new layer, we just set the URL of the existing one.
-            // This prevents excessive tile requests and 429 errors.
             radarLayer.setUrl(newUrl);
         }
 
