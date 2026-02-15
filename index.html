@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Liquid Glass Radar (Optimized)</title>
+    <title>Liquid Glass Radar (Mapbox Only)</title>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
         :root {
-            --glass-bg: rgba(15, 23, 42, 0.8);
+            --glass-bg: rgba(15, 23, 42, 0.85);
             --glass-border: rgba(255, 255, 255, 0.15);
             --glass-blur: blur(20px);
             --text-color: #ffffff;
             --input-bg: rgba(255, 255, 255, 0.1); 
-            --primary-dark: #020617; /* Even darker for better radar contrast */
+            --primary-dark: #020617; 
         }
 
         body, html {
@@ -152,7 +152,6 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
         .play-btn:hover { transform: scale(1.1); }
-        .play-btn:active { transform: scale(0.95); }
 
         .play-icon { width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-left: 12px solid #0f172a; margin-left: 4px; }
         .pause-icon { width: 12px; height: 14px; border-left: 4px solid #0f172a; border-right: 4px solid #0f172a; }
@@ -204,10 +203,13 @@
         </div>
     </div>
 
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Paste your token here
+        // --- MAPBOX CONFIGURATION ---
+        // PASTE YOUR TOKEN BELOW. If empty, map will be blank.
         const mapboxAccessToken = 'pk.eyJ1IjoiZ3RnMDExNiIsImEiOiJjbWxsODV6NXAwNThmM2ZwdWlkYm0xNjFlIn0.vI186twXYzY45nnuV5FucQ'; 
+        // -----------------------------
         
         const apiDataUrl = 'https://api.rainviewer.com/public/weather-maps.json';
         const tileSize = 256;
@@ -232,20 +234,18 @@
         const speedSelect = document.getElementById('speed-select');
 
         function initMap() {
+            // Initialize map
             map = L.map('map', {
                 zoomControl: false,
                 maxZoom: 12, 
                 minZoom: 2
             }).setView([39.0, -98.0], 4); 
 
-            // Create a dedicated pane for labels (Transparent overlay)
-            const labelPane = map.createPane('labels');
-            labelPane.style.zIndex = 650; 
-            labelPane.style.pointerEvents = 'none';
-
-            // 1. BASE DARK LAYER (Background only)
-            if (mapboxAccessToken && mapboxAccessToken.length > 5) {
-                // Mapbox Dark Background
+            // Strict Mapbox Implementation
+            if (mapboxAccessToken && mapboxAccessToken.length > 10) {
+                // Single Mapbox Dark Layer
+                // This contains both the background and the labels combined.
+                // It stays at the bottom (zIndex automatically handled by Leaflet)
                 L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=${mapboxAccessToken}`, {
                     attribution: '© Mapbox',
                     tileSize: 512,
@@ -253,20 +253,8 @@
                     maxZoom: 19
                 }).addTo(map);
             } else {
-                // CartoDB Dark No Labels
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; CartoDB',
-                    maxZoom: 19 
-                }).addTo(map);
+                console.error("Mapbox Access Token is missing. The map will appear blank.");
             }
-
-            // 2. TRANSPARENT LABELS LAYER (Always on top)
-            // Using CartoDB's dedicated "Labels Only" layer because it's purely transparent text/lines
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
-                pane: 'labels',
-                maxZoom: 19,
-                opacity: 0.8
-            }).addTo(map);
 
             fetchRadarData();
             
@@ -314,10 +302,13 @@
         }
 
         function initRadarLayer() {
+            // Radar sits on top of the base map
+            // Since we aren't adding a second label layer, the radar will slightly obscure labels 
+            // but this prevents the 'ghosting' white overlay issue.
             radarLayer = L.tileLayer('', {
                 tileSize: 256,
-                opacity: 0.85, // Increased visibility
-                zIndex: 400, 
+                opacity: 0.8, 
+                zIndex: 10, 
                 maxNativeZoom: 7, 
                 maxZoom: 12       
             }).addTo(map);
