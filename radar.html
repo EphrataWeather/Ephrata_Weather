@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Liquid Glass Radar (Optimized)</title>
+    <title>Liquid Glass Radar (Mapbox Optimized)</title>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -203,9 +203,10 @@
         </div>
     </div>
 
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Paste your token here
+        // Ensure you add your Mapbox token here
         const mapboxAccessToken = 'pk.eyJ1IjoiZ3RnMDExNiIsImEiOiJjbWxsODV6NXAwNThmM2ZwdWlkYm0xNjFlIn0.vI186twXYzY45nnuV5FucQ'; 
         
         const apiDataUrl = 'https://api.rainviewer.com/public/weather-maps.json';
@@ -231,41 +232,43 @@
         const speedSelect = document.getElementById('speed-select');
 
         function initMap() {
+            // Initialize map with a default view
             map = L.map('map', {
                 zoomControl: false,
                 maxZoom: 12, 
                 minZoom: 2
             }).setView([39.0, -98.0], 4); 
 
-            // Create a custom pane for labels so they float above the radar layer
+            // Create a custom pane for town labels to float above radar but below UI
             const labelPane = map.createPane('labels-top');
-            labelPane.style.zIndex = 650; // Between radar (400) and UI (2000)
+            labelPane.style.zIndex = 650; 
             labelPane.style.pointerEvents = 'none';
 
-            // 1. BASE LAYER (The background)
-            if (mapboxAccessToken && mapboxAccessToken.length > 5) {
-                // Mapbox Dark Background Only
+            // Use Mapbox exclusively if token is present
+            if (mapboxAccessToken && mapboxAccessToken.length > 10) {
+                // 1. Mapbox Dark Background (Base)
                 L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=${mapboxAccessToken}`, {
                     attribution: '© Mapbox',
                     tileSize: 512,
                     zoomOffset: -1,
                     maxZoom: 19
                 }).addTo(map);
-            } else {
-                // CartoDB Dark No Labels (Clean background)
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; CartoDB',
-                    maxZoom: 19 
-                }).addTo(map);
-            }
 
-            // 2. OVERLAY LABELS (The town names and borders)
-            // We use the CartoDB labels layer because it is transparent and high-contrast
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
-                pane: 'labels-top',
-                maxZoom: 19,
-                opacity: 0.9
-            }).addTo(map);
+                // 2. Mapbox Labels Overlay (Top Layer)
+                // Using the specific Mapbox "navigation-guidance-night" style filtered for labels
+                // which provides clean, transparent town names and borders.
+                L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=${mapboxAccessToken}&optimize=true`, {
+                    pane: 'labels-top',
+                    tileSize: 512,
+                    zoomOffset: -1,
+                    maxZoom: 19,
+                    opacity: 1
+                }).addTo(map);
+            } else {
+                // Warning/Fallback for missing token
+                console.warn("Mapbox Token Missing. Please add a valid mapboxAccessToken.");
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            }
 
             fetchRadarData();
             
@@ -315,7 +318,7 @@
         function initRadarLayer() {
             radarLayer = L.tileLayer('', {
                 tileSize: 256,
-                opacity: 0.85, 
+                opacity: 0.9, 
                 zIndex: 400, // Explicitly below the label pane (650)
                 maxNativeZoom: 7, 
                 maxZoom: 12       
