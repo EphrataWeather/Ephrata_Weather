@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Liquid Glass Radar (Mapbox)</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        :root {
+            /* Deep Navy Glass Theme */
+            --glass-bg: rgba(15, 23, 42, 0.75); /* Dark Navy with transparency */
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --glass-blur: blur(15px);
+            --text-color: #ffffff;
+            --input-bg: rgba(255, 255, 255, 0.1); 
+            --primary-dark: #0f172a; /* #0f172a hex code */
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            background-color: var(--primary-dark); 
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+            z-index: 1;
+            background: var(--primary-dark); 
+        }
+
+        /* --- Liquid Glass UI Container (Bottom) --- */
+        .bottom-ui-panel {
+            position: absolute;
+            bottom: 25px; 
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            width: 90%;
+            max-width: 800px;
+            padding: 15px 20px;
+            box-sizing: border-box;
+            pointer-events: auto;
+            
+            /* Glass Styling */
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5); 
+            border-radius: 20px;
+            color: var(--text-color);
+            
+            /* Layout */
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Top Row: Time, Speed, Legend */
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: nowrap; 
+            gap: 15px;
+        }
+        
+        .time-group {
+            flex-grow: 1;
+            min-width: 120px;
+        }
+
+        .time-display {
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            white-space: nowrap;
+        }
+        
+        .status-badge {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.8;
+            display: block;
+            margin-bottom: 2px;
+        }
+        
+        /* Speed Control Styling */
+        .speed-control {
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+            font-weight: 600;
+            background: rgba(255,255,255,0.05); 
+            padding: 4px 10px;
+            border-radius: 8px;
+            white-space: nowrap;
+            gap: 10px; 
+        }
+
+        #speed-select {
+            background-color: var(--input-bg);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            padding: 4px 8px;
+            color: var(--text-color);
+            font-size: 0.85rem;
+            cursor: pointer;
+            outline: none;
+        }
+        #speed-select option {
+            background-color: var(--primary-dark); 
+            color: white;
+        }
+
+        /* Legend */
+        .legend-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-shadow: 0 1px 2px black;
+            flex-shrink: 0;
+        }
+
+        .legend-bar {
+            width: 80px;
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(to right, 
+                #8ED2CD 0%, 
+                #00CC00 25%, 
+                #FFFF00 50%, 
+                #FF0000 75%, 
+                #800080 100%);
+            border: 1px solid rgba(255,255,255,0.4);
+        }
+        
+        /* Bottom Row: Playback and Slider */
+        .controls-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+
+        /* Play Button */
+        .play-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            width: 42px;
+            height: 42px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .play-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.05);
+        }
+        .play-icon {
+            width: 0; 
+            height: 0; 
+            border-top: 6px solid transparent;
+            border-bottom: 6px solid transparent;
+            border-left: 10px solid white;
+            margin-left: 3px;
+        }
+        .pause-icon {
+            width: 10px;
+            height: 12px;
+            border-left: 3px solid white;
+            border-right: 3px solid white;
+        }
+
+        /* Range Slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            margin-top: -7px; 
+            box-shadow: 0 0 8px rgba(0,0,0,0.5);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.4);
+            border-radius: 2px;
+        }
+        
+        /* Loader */
+        .loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: none;
+            z-index: 500;
+        }
+
+        @keyframes spin { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+
+        /* Mobile Adjustments */
+        @media (max-width: 600px) {
+            .header-row {
+                flex-wrap: wrap; 
+                gap: 10px;
+            }
+            .time-group {
+                width: 100%; 
+                text-align: center;
+                margin-bottom: 5px;
+            }
+            .speed-control {
+                flex-grow: 1;
+                justify-content: center;
+            }
+            .legend-group {
+                flex-grow: 1;
+                justify-content: center;
+            }
+            .legend-group span {
+                display: none; 
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loader" class="loader"></div>
+    <div id="map"></div>
+
+    <div class="bottom-ui-panel">
+        <div class="header-row">
+            <!-- Time Info -->
+            <div class="time-group">
+                <span class="status-badge">Radar Time</span>
+                <div class="time-display" id="timestamp">Loading...</div>
+            </div>
+            
+            <!-- Speed Control -->
+            <div class="speed-control">
+                <span>Speed:</span>
+                <select id="speed-select">
+                    <option value="1000">1x</option>
+                    <option value="500" selected>2x</option>
+                    <option value="250">4x</option>
+                </select>
+            </div>
+            
+            <!-- Legend -->
+            <div class="legend-group">
+                <span style="color: #8ED2CD">Light</span>
+                <div class="legend-bar"></div>
+                <span style="color: #800080">Heavy</span>
+            </div>
+        </div>
+        
+        <div class="controls-row">
+            <button id="play-pause" class="play-btn">
+                <div class="play-icon" id="btn-icon"></div>
+            </button>
+            <input type="range" id="time-slider" min="0" max="100" value="0">
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // --- MAPBOX CONFIGURATION ---
+        // 1. Get a key from https://account.mapbox.com/
+        // 2. Paste it below inside the quotes
+        const mapboxAccessToken = 'pk.eyJ1IjoiZ3RnMDExNiIsImEiOiJjbWxsODV6NXAwNThmM2ZwdWlkYm0xNjFlIn0.vI186twXYzY45nnuV5FucQ'; 
+        // -----------------------------
+
+        const apiDataUrl = 'https://api.rainviewer.com/public/weather-maps.json';
+        const tileSize = 256;
+        const colorScheme = 2; 
+        const smoothOption = 1;
+        const snowOption = 1;
+
+        let map;
+        let timestamps = [];
+        let apiResponse = {};
+        let currentLayer = null;
+        let currentIndex = 0;
+        let isPlaying = false;
+        let animationInterval;
+        let animationSpeed = 500;
+
+        const playBtn = document.getElementById('play-pause');
+        const btnIcon = document.getElementById('btn-icon');
+        const slider = document.getElementById('time-slider');
+        const timeDisplay = document.getElementById('timestamp');
+        const loader = document.getElementById('loader');
+        const speedSelect = document.getElementById('speed-select');
+
+        function initMap() {
+            // Initialize map with constraints
+            map = L.map('map', {
+                zoomControl: false,
+                maxZoom: 12, 
+                minZoom: 2
+            }).setView([39.0, -98.0], 4); 
+
+            // Base Map Logic: Mapbox with Fallback
+            if (mapboxAccessToken && mapboxAccessToken.length > 5) {
+                // Use Mapbox if token is present
+                L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=' + mapboxAccessToken, {
+                    attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a>',
+                    tileSize: 512,
+                    zoomOffset: -1,
+                    maxZoom: 19
+                }).addTo(map);
+            } else {
+                // Fallback to CartoDB Dark Matter if no token is provided
+                console.warn("Mapbox Access Token missing. Using CartoDB fallback.");
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; OpenStreetMap &copy; CartoDB',
+                    subdomains: 'abcd',
+                    maxZoom: 19 
+                }).addTo(map);
+            }
+
+            fetchRadarData();
+            
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    map.setView([position.coords.latitude, position.coords.longitude], 7);
+                });
+            }
+        }
+
+        function fetchRadarData() {
+            loader.style.display = 'block';
+            fetch(apiDataUrl)
+                .then(res => res.json())
+                .then(data => {
+                    apiResponse = data;
+                    let past = data.radar ? data.radar.past : [];
+                    let nowcast = data.radar ? data.radar.nowcast : [];
+                    timestamps = [...past, ...nowcast];
+                    
+                    if (timestamps.length > 0) {
+                        setupControls();
+                        
+                        const nowUnix = Math.floor(Date.now() / 1000);
+                        let closestIndex = 0;
+                        let minDiff = Infinity;
+                        
+                        timestamps.forEach((ts, index) => {
+                            const diff = Math.abs(nowUnix - ts.time);
+                            if (diff < minDiff && ts.time <= nowUnix) {
+                                minDiff = diff;
+                                closestIndex = index;
+                            }
+                        });
+                        showFrame(closestIndex);
+                    }
+                    loader.style.display = 'none';
+                })
+                .catch(error => {
+                    console.error("Error fetching radar data:", error);
+                    timeDisplay.innerText = "Data Unavailable";
+                    loader.style.display = 'none';
+                });
+        }
+
+        function setupControls() {
+            slider.max = timestamps.length - 1;
+            
+            slider.addEventListener('input', (e) => {
+                pauseAnimation();
+                showFrame(parseInt(e.target.value));
+            });
+
+            playBtn.addEventListener('click', togglePlay);
+            
+            speedSelect.addEventListener('change', (e) => {
+                animationSpeed = parseInt(e.target.value);
+                if (isPlaying) {
+                    pauseAnimation();
+                    startAnimation();
+                }
+            });
+        }
+
+        function showFrame(index) {
+            if (index < 0 || index >= timestamps.length) return;
+            
+            currentIndex = index;
+            slider.value = index;
+
+            const tsObj = timestamps[index];
+            const time = new Date(tsObj.time * 1000);
+            timeDisplay.innerText = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const layerUrl = `${apiResponse.host}${tsObj.path}/${tileSize}/{z}/{x}/{y}/${colorScheme}/${smoothOption}_${snowOption}.png`;
+
+            // Radar Layer: Stretches z7 tiles when zooming deeper
+            const newLayer = L.tileLayer(layerUrl, {
+                tileSize: 256,
+                opacity: 0.0,
+                zIndex: 10,
+                maxNativeZoom: 7, 
+                maxZoom: 12       
+            }).addTo(map);
+            
+            newLayer.on('load', () => {
+                newLayer.setOpacity(0.8);
+                if (currentLayer && currentLayer !== newLayer) {
+                    map.removeLayer(currentLayer);
+                }
+                currentLayer = newLayer;
+            });
+            
+            newLayer.on('tileerror', () => {
+                map.removeLayer(newLayer); 
+                if (currentLayer) currentLayer.setOpacity(0.8); 
+            });
+        }
+
+        function togglePlay() {
+            if (isPlaying) pauseAnimation();
+            else startAnimation();
+        }
+
+        function startAnimation() {
+            isPlaying = true;
+            btnIcon.className = 'pause-icon'; 
+            if (currentIndex >= timestamps.length - 1) currentIndex = 0;
+            
+            clearInterval(animationInterval); 
+            animationInterval = setInterval(() => {
+                currentIndex++;
+                if (currentIndex >= timestamps.length) currentIndex = 0; 
+                showFrame(currentIndex);
+            }, animationSpeed);
+        }
+
+        function pauseAnimation() {
+            isPlaying = false;
+            btnIcon.className = 'play-icon'; 
+            clearInterval(animationInterval);
+        }
+
+        initMap();
+    </script>
+</body>
+</html>
